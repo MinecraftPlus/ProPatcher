@@ -9,7 +9,7 @@ plugins {
 sourceCompatibility = '1.8'
 targetCompatibility = '1.8'
 
-group = 'uk.jamierocks'
+group = 'org.minecraftplus.gradle'
 version = '2.0.1'
 description = 'ProPatcher is a Gradle plugin for creating .patch files on the go.'
 
