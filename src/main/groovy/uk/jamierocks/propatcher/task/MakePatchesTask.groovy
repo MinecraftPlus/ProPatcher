@@ -33,6 +33,7 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 
 import java.nio.charset.StandardCharsets
@@ -44,7 +45,7 @@ class MakePatchesTask extends DefaultTask {
     @InputFile @Optional File rootZip = null
     @InputDirectory @Optional File rootDir = null
     @InputDirectory File target
-    @InputDirectory File patches
+    @OutputDirectory File patches
     @Input @Optional String originalPrefix = 'a/'
     @Input @Optional String modifiedPrefix = 'b/'
     private boolean ignoreWhitespace = true
