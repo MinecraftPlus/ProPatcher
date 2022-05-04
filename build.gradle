@@ -1,6 +1,7 @@
 plugins {
-    id 'java-gradle-plugin'
     id 'groovy'
+    id 'groovy-gradle-plugin'
+    id 'maven-publish'
 
     id 'com.gradle.plugin-publish' version '0.12.0'
     id 'org.cadixdev.licenser' version '0.6.1'
@@ -27,16 +28,35 @@ license {
     header file('HEADER.txt')
 }
 
-pluginBundle {
-    website = 'https://www.cadixdev.org/'
-    vcsUrl = 'https://github.com/CadixDev/ProPatcher'
-    description = project.description
-    tags = ['patches']
-
+gradlePlugin {
     plugins {
         propatcherPlugin {
             id = 'uk.jamierocks.propatcher'
             displayName = 'propatcher'
+            description = project.description
+            implementationClass = 'uk.jamierocks.propatcher.ProPatcherPlugin'
+        }
+    }
+}
+
+publishing {
+    repositories {
+        maven {
+            name = "minecraftplus"
+            url = "https://maven.minecraftplus.org"
+            allowInsecureProtocol = false
+
+            if (project.version.toString().endsWith("-SNAPSHOT")) {
+                url = url.toString().concat("/snapshots")
+            } else {
+                url = url.toString().concat("/releases")
+            }
+
+            // To know how use credentials see https://docs.gradle.org/current/samples/sample_publishing_credentials.html
+            credentials(PasswordCredentials)
+            authentication {
+                basic(BasicAuthentication)
+            }
         }
     }
 }
