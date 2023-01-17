@@ -11,7 +11,7 @@ You can find the plugin [here](https://plugins.gradle.org/plugin/uk.jamierocks.p
 
 ```gradle
 plugins {
-    id 'uk.jamierocks.propatcher' version '2.1.0-SNAPSHOT'
+    id 'uk.jamierocks.propatcher' version '2.1.0'
 }
 ```
 
@@ -26,7 +26,7 @@ buildscript {
         }
     }
     dependencies {
-        classpath 'org.minecraftplus.gradle:propatcher:2.1.0-SNAPSHOT'
+        classpath 'org.minecraftplus.gradle:propatcher:2.1.0'
     }
 }
 
