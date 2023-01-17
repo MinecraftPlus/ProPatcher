@@ -37,6 +37,7 @@ import org.gradle.api.tasks.TaskAction
 
 import java.nio.charset.StandardCharsets
 import java.util.regex.Matcher
+import java.util.zip.InflaterInputStream
 import java.util.zip.ZipFile
 
 class MakePatchesTask extends DefaultTask {
@@ -96,7 +97,7 @@ class MakePatchesTask extends DefaultTask {
             def zip = new ZipFile(root)
             zip.entries().each { ent ->
                 if (!ent.isDirectory()) {
-                    isBinaryFile(zip.getInputStream(ent)) ?
+                    isBinaryEntry(zip.getInputStream(ent)) ?
                             makeBinaryPatch(ent.name, zip.getInputStream(ent), new File(target, ent.name))
                                     : makeTextPatch(ent.name, zip.getInputStream(ent), new File(target, ent.name))
                     paths.remove(ent.name)
@@ -106,9 +107,10 @@ class MakePatchesTask extends DefaultTask {
 
         // Process added files
         paths.each { path ->
-            isBinaryFile(new File(path)) ?
-                    makeBinaryPatch(path, null, new File(target, path))
-                            : makeTextPatch(path, null, new File(target, path))
+            def file = new File(target, path)
+            isBinaryFile(file) ?
+                    makeBinaryPatch(path, null, file)
+                            : makeTextPatch(path, null, file)
         }
     }
 
@@ -161,12 +163,16 @@ class MakePatchesTask extends DefaultTask {
     /**
      *  Guess whether given file is binary. Just checks for anything under 0x09.
      */
-    public static boolean isBinaryFile(File f) throws FileNotFoundException, IOException {
+    def isBinaryFile(File f) throws FileNotFoundException, IOException {
         FileInputStream input = new FileInputStream(f);
         return isBinary(input);
     }
 
-    public static boolean isBinary(InputStream input) throws FileNotFoundException, IOException {
+    def isBinaryEntry(InflaterInputStream input) throws FileNotFoundException, IOException {
+        return isBinary(input);
+    }
+
+    def isBinary(InputStream input) throws FileNotFoundException, IOException {
         int size = input.available();
         if (size > 1024) size = 1024;
         byte[] data = new byte[size];
