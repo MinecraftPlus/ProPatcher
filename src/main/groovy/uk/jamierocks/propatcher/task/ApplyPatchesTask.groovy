@@ -69,19 +69,25 @@ class ApplyPatchesTask extends DefaultTask {
                 fileName = fileName.substring(0, fileName.length() - '.diff'.length())
 
                 File oldFile = new File(target, fileName)
-                FileInputStream oldIn = new FileInputStream(oldFile);
-                byte[] oldBytes = new byte[(int) oldFile.length()];
-                oldIn.read(oldBytes);
-                oldIn.close();
+                byte[] oldBytes = new byte[0]
+                if (oldFile.exists()) {
+                    FileInputStream oldIn = new FileInputStream(oldFile)
+                    oldBytes = new byte[(int) oldFile.length()]
+                    oldIn.read(oldBytes)
+                    oldIn.close()
+                }
 
-                FileInputStream patchIn = new FileInputStream(file);
-                byte[] patchBytes = new byte[(int) file.length()];
-                patchIn.read(patchBytes);
-                patchIn.close();
+                FileInputStream patchIn = new FileInputStream(file)
+                byte[] patchBytes = new byte[(int) file.length()]
+                patchIn.read(patchBytes)
+                patchIn.close()
 
-                FileOutputStream out = new FileOutputStream(new File(target, fileName));
-                Patch.patch(oldBytes, patchBytes, out);
-                out.close();
+                File outFile = new File(target, fileName)
+                outFile.parentFile.mkdirs()
+                outFile.createNewFile()
+                FileOutputStream out = new FileOutputStream(outFile)
+                Patch.patch(oldBytes, patchBytes, out)
+                out.close()
             }
         }
 
