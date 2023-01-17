@@ -30,6 +30,7 @@ import groovy.io.FileType
 import com.cloudbees.diff.ContextualPatch
 import com.cloudbees.diff.ContextualPatch.PatchStatus
 import com.cloudbees.diff.PatchException
+import io.sigpipe.jbsdiff.Patch
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.TaskAction
@@ -61,6 +62,26 @@ class ApplyPatchesTask extends DefaultTask {
                             report.failure.printStackTrace()
                     }
                 }
+            } else
+            if (file.path.endsWith('.diff')) {
+                def fileName = patches.toPath().relativize(file.toPath())
+                        .toFile().path
+                fileName = fileName.substring(0, fileName.length() - '.diff'.length())
+
+                File oldFile = new File(target, fileName)
+                FileInputStream oldIn = new FileInputStream(oldFile);
+                byte[] oldBytes = new byte[(int) oldFile.length()];
+                oldIn.read(oldBytes);
+                oldIn.close();
+
+                FileInputStream patchIn = new FileInputStream(file);
+                byte[] patchBytes = new byte[(int) file.length()];
+                patchIn.read(patchBytes);
+                patchIn.close();
+
+                FileOutputStream out = new FileOutputStream(new File(target, fileName));
+                Patch.patch(oldBytes, patchBytes, out);
+                out.close();
             }
         }
 

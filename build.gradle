@@ -22,6 +22,7 @@ dependencies {
     implementation localGroovy()
 
     implementation 'com.cloudbees:diff4j:1.2'
+    implementation 'io.sigpipe:jbsdiff:1.0'
 }
 
 license {

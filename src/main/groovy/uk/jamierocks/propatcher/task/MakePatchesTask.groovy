@@ -25,7 +25,6 @@
 
 package uk.jamierocks.propatcher.task
 
-import com.cloudbees.diff.Diff
 import groovy.io.FileType
 import org.gradle.api.DefaultTask
 import org.gradle.api.InvalidUserDataException
@@ -86,29 +85,44 @@ class MakePatchesTask extends DefaultTask {
         if (root.isDirectory()) {
             root.eachFileRecurse(FileType.FILES) { file ->
                 def relative = relative(root, file)
-                file.withInputStream{stream -> makePatch(relative, stream, new File(target, relative))}
+                file.withInputStream { stream ->
+                    isBinaryFile(file) ?
+                            makeBinaryPatch(relative, stream, new File(target, relative))
+                                    : makeTextPatch(relative, stream, new File(target, relative))
+                }
                 paths.remove(relative)
             }
         } else {
             def zip = new ZipFile(root)
             zip.entries().each { ent ->
                 if (!ent.isDirectory()) {
-                    makePatch(ent.name, zip.getInputStream(ent), new File(target, ent.name))
+                    isBinaryFile(zip.getInputStream(ent)) ?
+                            makeBinaryPatch(ent.name, zip.getInputStream(ent), new File(target, ent.name))
+                                    : makeTextPatch(ent.name, zip.getInputStream(ent), new File(target, ent.name))
                     paths.remove(ent.name)
                 }
             }
         }
-        paths.each{ makePatch(it, null, new File(target, it)) } //Added files!
+
+        // Process added files
+        paths.each { path ->
+            isBinaryFile(new File(path)) ?
+                    makeBinaryPatch(path, null, new File(target, path))
+                            : makeTextPatch(path, null, new File(target, path))
+        }
     }
 
-    def makePatch(relative, original, modified) {
+    def makeTextPatch(relative, original, modified) {
         String originalRelative = original == null ? '/dev/null' : originalPrefix + relative
         String modifiedRelative = !modified.exists() ? '/dev/null' : modifiedPrefix + relative
 
         def originalData = original == null ? "" : original.getText("UTF-8")
         def modifiedData = !modified.exists() ? "" : modified.getText("UTF-8")
 
-        final Diff diff = Diff.diff(new StringReader(originalData), new StringReader(modifiedData), ignoreWhitespace)
+        final com.cloudbees.diff.Diff diff = com.cloudbees.diff.Diff.diff(
+                new StringReader(originalData),
+                new StringReader(modifiedData),
+                ignoreWhitespace)
 
         if (!diff.isEmpty()) {
             final File patchFile = new File(patches, "${relative}.patch")
@@ -125,4 +139,54 @@ class MakePatchesTask extends DefaultTask {
         }
     }
 
+    def makeBinaryPatch(relative, original, modified) {
+        String originalRelative = original == null ? '/dev/null' : originalPrefix + relative
+        String modifiedRelative = !modified.exists() ? '/dev/null' : modifiedPrefix + relative
+
+        def originalData = original == null ? new byte[0] : original.getBytes()
+        def modifiedData = !modified.exists() ? new byte[0] : modified.getBytes()
+
+        final File patchFile = new File(patches, "${relative}.diff")
+        patchFile.parentFile.mkdirs()
+        patchFile.createNewFile()
+
+        OutputStream output = new FileOutputStream(patchFile)
+
+        final io.sigpipe.jbsdiff.Diff diff = io.sigpipe.jbsdiff.Diff.diff(
+                originalData,
+                modifiedData,
+                output)
+    }
+
+    /**
+     *  Guess whether given file is binary. Just checks for anything under 0x09.
+     */
+    public static boolean isBinaryFile(File f) throws FileNotFoundException, IOException {
+        FileInputStream input = new FileInputStream(f);
+        return isBinary(input);
+    }
+
+    public static boolean isBinary(InputStream input) throws FileNotFoundException, IOException {
+        int size = input.available();
+        if (size > 1024) size = 1024;
+        byte[] data = new byte[size];
+        input.read(data);
+        input.close();
+
+        int ascii = 0;
+        int other = 0;
+
+        for (int i = 0; i < data.length; i++) {
+            byte b = data[i];
+            if (b < 0x09) return true;
+
+            if (b == 0x09 || b == 0x0A || b == 0x0C || b == 0x0D) ascii++;
+            else if (b >= 0x20 && b <= 0x7E) ascii++;
+            else other++;
+        }
+
+        if (other == 0) return false;
+
+        return 100 * other / (ascii + other) > 95;
+    }
 }
