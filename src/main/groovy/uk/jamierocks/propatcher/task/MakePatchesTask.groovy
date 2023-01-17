@@ -148,6 +148,9 @@ class MakePatchesTask extends DefaultTask {
         def originalData = original == null ? new byte[0] : original.getBytes()
         def modifiedData = !modified.exists() ? new byte[0] : modified.getBytes()
 
+        if (Arrays.equals(originalData, modifiedData))
+            return  // no changes
+
         final File patchFile = new File(patches, "${relative}.diff")
         patchFile.parentFile.mkdirs()
         patchFile.createNewFile()
