@@ -40,6 +40,15 @@ class ApplyPatchesTask extends DefaultTask {
     @InputDirectory File target
     @InputDirectory File patches
 
+    enum Mode {
+        /** Update to existing file */
+        CHANGE,
+        /** Adding a new file */
+        ADD,
+        /** Deleting an existing file */
+        DELETE
+    }
+
     @TaskAction
     void doTask() {
         if (!patches.exists()) {
@@ -69,6 +78,22 @@ class ApplyPatchesTask extends DefaultTask {
                 fileName = fileName.substring(0, fileName.length() - '.diff'.length())
 
                 File oldFile = new File(target, fileName)
+                File outFile = new File(target, fileName)
+
+                FileReader reader = new FileReader(file)
+                String base = reader.readLine()
+                String modified = reader.readLine()
+                reader.close()
+
+                if (base == null || !base.startsWith("--- ")) throw new PatchException("Invalid diff header: " + base);
+                if (modified == null || !modified.startsWith("+++ ")) throw new PatchException("Invalid diff header: " + modified);
+
+                Mode mode = computeTargetPath(base, modified);
+                if (mode == Mode.DELETE) {
+                    outFile.delete()
+                    return;
+                }
+
                 byte[] oldBytes = new byte[0]
                 if (oldFile.exists()) {
                     FileInputStream oldIn = new FileInputStream(oldFile)
@@ -82,11 +107,13 @@ class ApplyPatchesTask extends DefaultTask {
                 patchIn.read(patchBytes)
                 patchIn.close()
 
-                File outFile = new File(target, fileName)
+                def offset = base.getBytes().length + 1 + modified.getBytes().length + 1
+                def diffBytes = Arrays.copyOfRange(patchBytes, offset, patchBytes.length)
+
                 outFile.parentFile.mkdirs()
                 outFile.createNewFile()
                 FileOutputStream out = new FileOutputStream(outFile)
-                Patch.patch(oldBytes, patchBytes, out)
+                Patch.patch(oldBytes, diffBytes, out)
                 out.close()
             }
         }
@@ -102,4 +129,29 @@ class ApplyPatchesTask extends DefaultTask {
             throw new RuntimeException('One or more patches failed to apply, see log for details')
     }
 
+    private Mode computeTargetPath(String base, String modified) { //, ContextualPatch.SinglePatch patch) {
+        base = base.substring("+++ ".length());
+        modified = modified.substring("--- ".length());
+        // first seen in mercurial diffs: base and modified paths are different: base starts with "a/" and modified starts with "b/"
+        if ((base.startsWith("/dev/null") || base.startsWith("a/")) && (modified.equals("/dev/null") || modified.startsWith("b/"))) {
+            if (base.startsWith("a/"))      base = base.substring(2);
+            if (modified.startsWith("b/"))  modified = modified.substring(2);
+        }
+        base = untilTab(base).trim();
+        if (base.equals("/dev/null")) {
+            // "/dev/null" in base indicates a new file
+//            patch.targetPath = untilTab(modified).trim();
+            return Mode.ADD;
+        } else {
+//            patch.targetPath = base;
+            return modified.startsWith("/dev/null") ? Mode.DELETE : Mode.CHANGE;
+        }
+    }
+
+    private String untilTab(String base) {
+        int pathEndIdx = base.indexOf('\t');
+        if (pathEndIdx>0)
+            base = base.substring(0, pathEndIdx);
+        return base;
+    }
 }

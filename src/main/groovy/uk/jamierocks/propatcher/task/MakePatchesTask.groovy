@@ -48,6 +48,7 @@ class MakePatchesTask extends DefaultTask {
     @OutputDirectory File patches
     @Input @Optional String originalPrefix = 'a/'
     @Input @Optional String modifiedPrefix = 'b/'
+    @Input @Optional String newline = '\n'
     private boolean ignoreWhitespace = true
 
     static def relative(base, file) {
@@ -156,6 +157,16 @@ class MakePatchesTask extends DefaultTask {
         patchFile.createNewFile()
 
         OutputStream output = new FileOutputStream(patchFile)
+
+        StringBuilder buffer = new StringBuilder();
+        buffer.append("--- ");
+        buffer.append(originalRelative);
+        buffer.append(newline);
+        buffer.append("+++ ");
+        buffer.append(modifiedRelative);
+        buffer.append(newline);
+
+        output.write(buffer.toString().getBytes())
 
         final io.sigpipe.jbsdiff.Diff diff = io.sigpipe.jbsdiff.Diff.diff(
                 originalData,
