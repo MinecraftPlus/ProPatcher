@@ -87,8 +87,13 @@ class ApplyPatchesTask extends DefaultTask {
 
                 if (base == null || !base.startsWith("--- ")) throw new PatchException("Invalid diff header: " + base);
                 if (modified == null || !modified.startsWith("+++ ")) throw new PatchException("Invalid diff header: " + modified);
-
                 Mode mode = computeTargetPath(base, modified);
+
+                logger.debug("Binary patch details:")
+                logger.debug("    base: {} {}", base, base.getBytes())
+                logger.debug("modified: {} {}", modified, modified.getBytes())
+                logger.debug("    mode: {}", mode)
+
                 if (mode == Mode.DELETE) {
                     outFile.delete()
                     return;
@@ -109,6 +114,10 @@ class ApplyPatchesTask extends DefaultTask {
 
                 def offset = base.getBytes().length + 1 + modified.getBytes().length + 1
                 def diffBytes = Arrays.copyOfRange(patchBytes, offset, patchBytes.length)
+
+                logger.debug("  offset: {}", offset)
+                logger.debug("  patchb: {} {}", patchBytes.length, patchBytes)
+                logger.debug("   diffb: {} {}", diffBytes.length, diffBytes)
 
                 outFile.parentFile.mkdirs()
                 outFile.createNewFile()
