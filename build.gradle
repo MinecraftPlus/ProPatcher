@@ -3,6 +3,7 @@ plugins {
     id 'groovy-gradle-plugin'
     id 'maven-publish'
 
+    id 'me.qoomon.git-versioning' version '5.2.0'
     id 'com.gradle.plugin-publish' version '0.12.0'
     id 'org.cadixdev.licenser' version '0.6.1'
 }
@@ -11,8 +12,27 @@ sourceCompatibility = '1.8'
 targetCompatibility = '1.8'
 
 group = 'org.minecraftplus.gradle'
-version = '2.1.0'
 description = 'ProPatcher is a Gradle plugin for creating .patch files on the go.'
+
+version = '0.0.0-SNAPSHOT'
+gitVersioning.apply {
+    refs {
+        considerTagsOnBranches = true
+        tag('v?(?<version>.*)') {
+            version = '${ref.version}'
+        }
+        branch('development') {
+            version = '${describe.tag}.${describe.distance}'
+        }
+        branch('.*') {
+            version = '${describe.tag}.${describe.distance}-SNAPSHOT'
+        }
+        rev {
+            version = '${describe.tag}-${commit.short}-SNAPSHOT'
+        }
+    }
+}
+println('Version: ' + version)
 
 repositories {
     mavenCentral()

@@ -129,7 +129,7 @@ class ApplyPatchesTask extends DefaultTask {
             throw new RuntimeException('One or more patches failed to apply, see log for details')
     }
 
-    private Mode computeTargetPath(String base, String modified) { //, ContextualPatch.SinglePatch patch) {
+    def computeTargetPath(base, modified) { //, ContextualPatch.SinglePatch patch) {
         base = base.substring("+++ ".length());
         modified = modified.substring("--- ".length());
         // first seen in mercurial diffs: base and modified paths are different: base starts with "a/" and modified starts with "b/"
@@ -148,7 +148,7 @@ class ApplyPatchesTask extends DefaultTask {
         }
     }
 
-    private String untilTab(String base) {
+    def untilTab(base) {
         int pathEndIdx = base.indexOf('\t');
         if (pathEndIdx>0)
             base = base.substring(0, pathEndIdx);
